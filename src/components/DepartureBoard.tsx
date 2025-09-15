@@ -30,12 +30,20 @@ const mapDeparture = (dep: any, index: number): Departure => {
   let planned = parseDate(dep.departure_timestamp?.scheduled);
   let actual = parseDate(dep.departure_timestamp?.predicted);
 
+  // Calculate delay properly
   let delay = 0;
+  
+  // First try to use the delay field if available
   if (dep.delay?.is_available && typeof dep.delay.minutes === 'number') {
     delay = dep.delay.minutes;
-  } else if (dep.departure_timestamp?.minutes) {
-    delay = parseInt(dep.departure_timestamp.minutes);
+  } 
+  // If both planned and actual times are available, calculate the difference
+  else if (planned && actual) {
+    delay = Math.round((actual.getTime() - planned.getTime()) / (1000 * 60)); // Convert to minutes
   }
+  
+  // Debug logging
+  console.log(`Line ${line}: planned=${planned?.toISOString()}, actual=${actual?.toISOString()}, delay=${delay}, raw_delay=${dep.delay?.minutes}, timestamp_minutes=${dep.departure_timestamp?.minutes}`);
 
   return {
     id: index.toString(),
