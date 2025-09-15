@@ -1,99 +1,106 @@
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Clock, MapPin, Train } from "lucide-react";
+import { useState, useEffect } from "react";
 
 interface Departure {
   id: string;
-  lineNumber: string;
-  endStation: string;
-  plannedDeparture: string;
+  line: string;
+  direction: string;
+  plannedTime: string;
+  actualTime: string;
   delay: number;
-  status: 'ontime' | 'delayed' | 'cancelled' | 'boarding';
 }
 
-// Mock data - replace with your API data
-const mockDepartures: Departure[] = [
-  {
-    id: "1",
-    lineNumber: "7",
-    endStation: "Central Station",
-    plannedDeparture: "14:23",
-    delay: 0,
-    status: "ontime"
-  },
-  {
-    id: "2",
-    lineNumber: "42",
-    endStation: "Airport Terminal",
-    plannedDeparture: "14:27",
-    delay: 3,
-    status: "delayed"
-  },
-  {
-    id: "3",
-    lineNumber: "15",
-    endStation: "University Campus",
-    plannedDeparture: "14:30",
-    delay: 0,
-    status: "boarding"
-  },
-  {
-    id: "4",
-    lineNumber: "23",
-    endStation: "Shopping District",
-    plannedDeparture: "14:35",
-    delay: -1,
-    status: "ontime"
-  },
-  {
-    id: "5",
-    lineNumber: "8",
-    endStation: "Industrial Zone",
-    plannedDeparture: "14:38",
-    delay: 5,
-    status: "delayed"
-  },
-  {
-    id: "6",
-    lineNumber: "91",
-    endStation: "Residential Area",
-    plannedDeparture: "14:42",
-    delay: 0,
-    status: "cancelled"
-  }
-];
+const API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MzkzMiwiaWF0IjoxNzU3ODM1OTk2LCJleHAiOjExNzU3ODM1OTk2LCJpc3MiOiJnb2xlbWlvIiwianRpIjoiZTBmMTZiOTctOTk1Ny00ODRkLWJhMDYtZWY1MTE5Y2U5NWMzIn0.MheFv44g0u2YlSpPFjQYGb7hXboOoAM81f1HAvIg2V8";
+const STOP_ID = "U40Z1P";
+const LIMIT = 12;
+const POLL_INTERVAL = 30000;
 
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'ontime':
-      return 'bg-status-ontime text-background';
-    case 'delayed':
-      return 'bg-status-delayed text-background';
-    case 'cancelled':
-      return 'bg-status-cancelled text-background';
-    case 'boarding':
-      return 'bg-status-boarding text-background';
-    default:
-      return 'bg-muted text-muted-foreground';
-  }
+const parseDate = (val: string | null | undefined): Date | null => {
+  if (!val) return null;
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? null : d;
 };
 
-const getStatusText = (status: string, delay: number) => {
-  switch (status) {
-    case 'ontime':
-      return delay < 0 ? `${Math.abs(delay)}min early` : 'On time';
-    case 'delayed':
-      return `+${delay}min`;
-    case 'cancelled':
-      return 'Cancelled';
-    case 'boarding':
-      return 'Boarding';
-    default:
-      return 'Unknown';
+const mapDeparture = (dep: any, index: number): Departure => {
+  const line = dep.route?.short_name || dep.route_short_name || dep.line || '-';
+  const direction = dep.trip?.headsign || dep.headsign || dep.destination || '-';
+
+  let planned = parseDate(dep.departure_timestamp?.scheduled);
+  let actual = parseDate(dep.departure_timestamp?.predicted);
+
+  let delay = 0;
+  if (dep.delay?.is_available && typeof dep.delay.minutes === 'number') {
+    delay = dep.delay.minutes;
+  } else if (dep.departure_timestamp?.minutes) {
+    delay = parseInt(dep.departure_timestamp.minutes);
   }
+
+  return {
+    id: index.toString(),
+    line,
+    direction,
+    plannedTime: planned ? planned.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—',
+    actualTime: actual ? actual.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—',
+    delay
+  };
+};
+
+const getDelayColor = (delay: number) => {
+  if (delay >= 3) return 'bg-status-delayed text-background';
+  if (delay > 0) return 'bg-orange-500 text-background';
+  return 'bg-status-ontime text-background';
+};
+
+const getDelayText = (delay: number) => {
+  if (delay > 0) return `+${delay} min`;
+  if (delay < 0) return `${delay} min`;
+  return '0 min';
 };
 
 const DepartureBoard = () => {
+  const [departures, setDepartures] = useState<Departure[]>([]);
+  const [status, setStatus] = useState<string>("Načítám...");
+  const [lastUpdated, setLastUpdated] = useState<string>("");
+
+  const fetchDepartures = async () => {
+    setStatus("Načítám data...");
+    try {
+      const response = await fetch(
+        `https://api.golemio.cz/v2/pid/departureboards?ids=${STOP_ID}&limit=${LIMIT}`,
+        {
+          headers: {
+            'Accept': 'application/json',
+            'x-access-token': API_KEY
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const departuresData = data.departureboards?.[0]?.departures || data.departures || [];
+      const mapped = departuresData.map(mapDeparture).slice(0, LIMIT);
+      
+      setDepartures(mapped);
+      setStatus("Aktualizováno");
+      setLastUpdated(new Date().toLocaleTimeString());
+    } catch (error) {
+      console.error(error);
+      setStatus("Chyba při načítání dat");
+      setDepartures([]);
+    }
+  };
+
+  useEffect(() => {
+    fetchDepartures();
+    const interval = setInterval(fetchDepartures, POLL_INTERVAL);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="mx-auto max-w-6xl">
@@ -102,15 +109,15 @@ const DepartureBoard = () => {
           <div className="flex items-center justify-center gap-3 mb-4">
             <Train className="h-8 w-8 text-primary" />
             <h1 className="text-4xl font-bold text-foreground">
-              Transit Departures
+              Na Pískách — Odjezdy tramvají
             </h1>
           </div>
           <p className="text-muted-foreground text-lg">
-            Real-time departure information
+            Informace o odjezdech v reálném čase
           </p>
           <div className="flex items-center justify-center gap-2 mt-2 text-sm text-muted-foreground">
             <Clock className="h-4 w-4" />
-            <span>Last updated: {new Date().toLocaleTimeString()}</span>
+            <span>{status} {lastUpdated && `- ${lastUpdated}`}</span>
           </div>
         </div>
 
@@ -119,69 +126,84 @@ const DepartureBoard = () => {
           {/* Table Header */}
           <div className="bg-secondary p-4 border-b border-border">
             <div className="grid grid-cols-12 gap-4 font-semibold text-secondary-foreground">
-              <div className="col-span-2 text-center">Line</div>
-              <div className="col-span-4 flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
-                Destination
-              </div>
+              <div className="col-span-2 text-center">Linka</div>
               <div className="col-span-3 flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                Departure
+                <MapPin className="h-4 w-4" />
+                Směr
               </div>
-              <div className="col-span-3 text-center">Status</div>
+              <div className="col-span-2 flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                Plánovaný
+              </div>
+              <div className="col-span-2 flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                Skutečný
+              </div>
+              <div className="col-span-3 text-center">Zpoždění</div>
             </div>
           </div>
 
           {/* Departure Rows */}
           <div className="divide-y divide-border">
-            {mockDepartures.map((departure, index) => (
-              <div
-                key={departure.id}
-                className="grid grid-cols-12 gap-4 p-4 hover:bg-muted/50 transition-colors animate-slide-up"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                {/* Line Number */}
-                <div className="col-span-2 flex justify-center">
-                  <Badge 
-                    variant="outline" 
-                    className="font-mono text-lg px-3 py-1 border-primary text-primary font-bold"
-                  >
-                    {departure.lineNumber}
-                  </Badge>
-                </div>
-
-                {/* End Station */}
-                <div className="col-span-4 flex items-center">
-                  <span className="text-foreground font-medium text-lg">
-                    {departure.endStation}
-                  </span>
-                </div>
-
-                {/* Planned Departure */}
-                <div className="col-span-3 flex items-center">
-                  <span className="font-mono text-xl font-bold text-foreground">
-                    {departure.plannedDeparture}
-                  </span>
-                </div>
-
-                {/* Status */}
-                <div className="col-span-3 flex justify-center">
-                  <Badge 
-                    className={`font-medium px-3 py-1 ${getStatusColor(departure.status)} ${
-                      departure.status === 'boarding' ? 'animate-pulse-glow' : ''
-                    }`}
-                  >
-                    {getStatusText(departure.status, departure.delay)}
-                  </Badge>
-                </div>
+            {departures.length === 0 ? (
+              <div className="p-8 text-center text-muted-foreground">
+                {status === "Chyba při načítání dat" ? "Nepodařilo se načíst odjezdy" : "Čekání na data..."}
               </div>
-            ))}
+            ) : (
+              departures.map((departure, index) => (
+                <div
+                  key={departure.id}
+                  className="grid grid-cols-12 gap-4 p-4 hover:bg-muted/50 transition-colors animate-slide-up"
+                  style={{ animationDelay: `${index * 100}ms` }}
+                >
+                  {/* Line Number */}
+                  <div className="col-span-2 flex justify-center">
+                    <Badge 
+                      variant="outline" 
+                      className="font-mono text-lg px-3 py-1 border-primary text-primary font-bold"
+                    >
+                      {departure.line}
+                    </Badge>
+                  </div>
+
+                  {/* Direction */}
+                  <div className="col-span-3 flex items-center">
+                    <span className="text-foreground font-medium text-sm">
+                      {departure.direction}
+                    </span>
+                  </div>
+
+                  {/* Planned Time */}
+                  <div className="col-span-2 flex items-center">
+                    <span className="font-mono text-lg font-bold text-muted-foreground">
+                      {departure.plannedTime}
+                    </span>
+                  </div>
+
+                  {/* Actual Time */}
+                  <div className="col-span-2 flex items-center">
+                    <span className="font-mono text-lg font-bold text-foreground">
+                      {departure.actualTime}
+                    </span>
+                  </div>
+
+                  {/* Delay */}
+                  <div className="col-span-3 flex justify-center">
+                    <Badge 
+                      className={`font-medium px-3 py-1 ${getDelayColor(departure.delay)}`}
+                    >
+                      {getDelayText(departure.delay)}
+                    </Badge>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </Card>
 
         {/* Footer */}
         <div className="mt-8 text-center text-sm text-muted-foreground">
-          <p>Refresh every 30 seconds for real-time updates</p>
+          <p>Aktualizace každých 30 sekund</p>
         </div>
       </div>
     </div>
