@@ -1,7 +1,7 @@
-import DepartureBoard from "@/components/DepartureBoard";
+import FourCornerDepartures from "@/components/FourCornerDepartures";
 
 const Index = () => {
-  return <DepartureBoard />;
+  return <FourCornerDepartures />;
 };
 
 export default Index;
