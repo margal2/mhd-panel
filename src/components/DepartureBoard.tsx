@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Clock, MapPin, Train } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Clock, MapPin, Train, ChevronDown, ChevronUp } from "lucide-react";
 import { useState, useEffect } from "react";
 
 interface Departure {
@@ -75,6 +76,7 @@ const DepartureBoard = ({ stopName, stopId, limit = 6 }: DepartureBoardProps) =>
   const [departures, setDepartures] = useState<Departure[]>([]);
   const [status, setStatus] = useState<string>("Načítám...");
   const [lastUpdated, setLastUpdated] = useState<string>("");
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   const fetchDepartures = async () => {
     setStatus("Načítám data...");
@@ -105,6 +107,18 @@ const DepartureBoard = ({ stopName, stopId, limit = 6 }: DepartureBoardProps) =>
       setStatus("Chyba při načítání dat");
       setDepartures([]);
     }
+  };
+
+  const toggleExpanded = (departureId: string) => {
+    setExpandedRows(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(departureId)) {
+        newSet.delete(departureId);
+      } else {
+        newSet.add(departureId);
+      }
+      return newSet;
+    });
   };
 
   useEffect(() => {
@@ -147,43 +161,66 @@ const DepartureBoard = ({ stopName, stopId, limit = 6 }: DepartureBoardProps) =>
           </div>
         ) : (
           departures.map((departure, index) => (
-            <div
-              key={departure.id}
-              className="grid grid-cols-12 gap-2 p-2 hover:bg-muted/30 transition-colors text-sm"
-            >
-              {/* Line Number */}
-              <div className="col-span-2 flex justify-center">
-                <Badge 
-                  variant="outline" 
-                  className="font-mono text-xs px-2 py-1 border-primary text-primary font-bold"
-                >
-                  {departure.line}
-                </Badge>
-              </div>
+            <Collapsible key={departure.id} open={expandedRows.has(departure.id)} onOpenChange={() => toggleExpanded(departure.id)}>
+              <CollapsibleTrigger asChild>
+                <div className="grid grid-cols-12 gap-2 p-2 hover:bg-muted/30 transition-colors text-sm cursor-pointer">
+                  {/* Line Number */}
+                  <div className="col-span-2 flex justify-center">
+                    <Badge 
+                      variant="outline" 
+                      className="font-mono text-xs px-2 py-1 border-primary text-primary font-bold"
+                    >
+                      {departure.line}
+                    </Badge>
+                  </div>
 
-              {/* Direction */}
-              <div className="col-span-4 flex items-center">
-                <span className="text-foreground font-medium text-xs truncate">
-                  {departure.direction}
-                </span>
-              </div>
+                  {/* Direction */}
+                  <div className="col-span-4 flex items-center">
+                    <span className="text-foreground font-medium text-xs truncate">
+                      {departure.direction}
+                    </span>
+                    {expandedRows.has(departure.id) ? 
+                      <ChevronUp className="h-3 w-3 ml-1 flex-shrink-0" /> : 
+                      <ChevronDown className="h-3 w-3 ml-1 flex-shrink-0" />
+                    }
+                  </div>
 
-              {/* Time */}
-              <div className="col-span-3 flex items-center justify-center">
-                <span className="font-mono text-sm font-bold text-foreground">
-                  {departure.actualTime}
-                </span>
-              </div>
+                  {/* Time */}
+                  <div className="col-span-3 flex items-center justify-center">
+                    <span className="font-mono text-sm font-bold text-foreground">
+                      {departure.actualTime}
+                    </span>
+                  </div>
 
-              {/* Delay */}
-              <div className="col-span-3 flex justify-center">
-                <Badge 
-                  className={`font-medium px-2 py-1 text-xs ${getDelayColor(departure.delay)}`}
-                >
-                  {getDelayText(departure.delay)}
-                </Badge>
-              </div>
-            </div>
+                  {/* Delay */}
+                  <div className="col-span-3 flex justify-center">
+                    <Badge 
+                      className={`font-medium px-2 py-1 text-xs ${getDelayColor(departure.delay)}`}
+                    >
+                      {getDelayText(departure.delay)}
+                    </Badge>
+                  </div>
+                </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="bg-muted/20 p-3 text-xs">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <span className="font-medium text-muted-foreground">Plánovaný čas:</span>
+                      <div className="font-mono text-foreground">{departure.plannedTime}</div>
+                    </div>
+                    <div>
+                      <span className="font-medium text-muted-foreground">Skutečný čas:</span>
+                      <div className="font-mono text-foreground">{departure.actualTime}</div>
+                    </div>
+                  </div>
+                  <div className="mt-2">
+                    <span className="font-medium text-muted-foreground">Kompletní směr:</span>
+                    <div className="text-foreground">{departure.direction}</div>
+                  </div>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
           ))
         )}
       </div>

@@ -2,7 +2,7 @@ import DepartureBoard from "./DepartureBoard";
 
 const FourCornerDepartures = () => {
   const stops = [
-    { name: "Na Pískách", id: "U40Z1P" },
+    { name: "Na Pískách - Hradčanská", id: "U40Z1P" },
     { name: "Na Pískách - Dědina", id: "U40Z2P" },
     { name: "Sušická - Bořislavka", id: "U3017Z1P" },
     { name: "Sušická - Hradčanská", id: "U3017Z2P" }
