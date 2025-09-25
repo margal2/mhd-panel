@@ -9,13 +9,13 @@ const FourCornerDepartures = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90 p-2">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-background/90 p-1 sm:p-2">
       {/* Title */}
-      <div className="text-center mb-3">
-        <h1 className="text-3xl font-bold text-primary">Odjezdy MHD</h1>
+      <div className="text-center mb-2 sm:mb-3">
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-primary">Odjezdy MHD</h1>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 h-[calc(100vh-80px)]">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-1 sm:gap-2 h-[calc(100vh-60px)] sm:h-[calc(100vh-80px)]">
         {/* Top Left */}
         <div className="flex flex-col">
           <DepartureBoard 
