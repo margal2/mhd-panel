@@ -1,13 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MapPin, Search, Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
-
-const API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MzkzMiwiaWF0IjoxNzU3ODM1OTk2LCJleHAiOjExNzU3ODM1OTk2LCJpc3MiOiJnb2xlbWlvIiwianRpIjoiZTBmMTZiOTctOTk1Ny00ODRkLWJhMDYtZWY1MTE5Y2U5NWMzIn0.MheFv44g0u2YlSpPFjQYGb7hXboOoAM81f1HAvIg2V8";
+import { MapPin, Search, Plus, Loader2 } from "lucide-react";
 
 interface StopResult {
-  id: string;
   name: string;
   platforms: { id: string; name: string }[];
 }
@@ -16,48 +12,113 @@ interface StopSearchProps {
   onSelectStop: (stop: { name: string; id: string }) => void;
 }
 
+interface PidStop {
+  stop_id: string;
+  stop_name: string;
+  platform_code?: string;
+  zone_id?: string;
+}
+
+// Normalize Czech diacritics for fuzzy matching
+const removeDiacritics = (str: string): string =>
+  str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
 const StopSearch = ({ onSelectStop }: StopSearchProps) => {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<StopResult[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [allStops, setAllStops] = useState<PidStop[]>([]);
+  const [loading, setLoading] = useState(true);
   const [expandedStop, setExpandedStop] = useState<string | null>(null);
 
-  const searchStops = useCallback(async (q: string) => {
-    if (q.length < 2) { setResults([]); return; }
-    setLoading(true);
-    try {
-      const res = await fetch(
-        `https://api.golemio.cz/v2/gtfs/stops?names=${encodeURIComponent(q)}&limit=15`,
-        { headers: { "Accept": "application/json", "x-access-token": API_KEY } }
-      );
-      const data = await res.json();
-      const features = data.features || data || [];
-      
-      // Group by parent stop name
-      const grouped: Record<string, StopResult> = {};
-      for (const f of features) {
-        const name = f.properties?.stop_name || f.stop_name || "Unknown";
-        const id = f.properties?.stop_id || f.stop_id || "";
-        const parentName = name.replace(/\s*-\s*[A-Z0-9]+$/, "").replace(/\s*\(.*\)$/, "");
+  // Load all stops once from PID open data
+  useEffect(() => {
+    const fetchStops = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch("https://data.pid.cz/stops/json/stops.json");
+        const data = await res.json();
         
-        if (!grouped[parentName]) {
-          grouped[parentName] = { id: parentName, name: parentName, platforms: [] };
+        // The data can be an array of stops or have a specific structure
+        let stops: PidStop[] = [];
+        if (Array.isArray(data)) {
+          stops = data;
+        } else if (data.stopGroups) {
+          // Handle PID format with stop groups
+          for (const group of data.stopGroups) {
+            for (const stop of group.stops || []) {
+              stops.push({
+                stop_id: stop.gtfsIds?.[0] || stop.id || "",
+                stop_name: group.name || stop.altIdosName || "",
+                platform_code: stop.platform || "",
+              });
+            }
+          }
+        } else if (data.generatedAt && data.dataFormatVersion) {
+          // Another PID format
+          for (const group of data.stopGroups || []) {
+            for (const stop of group.stops || []) {
+              for (const gtfsId of stop.gtfsIds || []) {
+                stops.push({
+                  stop_id: gtfsId,
+                  stop_name: `${group.name}${stop.platform ? ` (${stop.platform})` : ""}`,
+                  platform_code: stop.platform || "",
+                });
+              }
+            }
+          }
         }
-        grouped[parentName].platforms.push({ id, name });
+        
+        setAllStops(stops);
+      } catch (e) {
+        console.error("Failed to load stops:", e);
+        // Fallback: try Golemio API with larger limit
+        try {
+          const res = await fetch("https://api.golemio.cz/v2/gtfs/stops?limit=10000", {
+            headers: {
+              Accept: "application/json",
+              "x-access-token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MzkzMiwiaWF0IjoxNzU3ODM1OTk2LCJleHAiOjExNzU3ODM1OTk2LCJpc3MiOiJnb2xlbWlvIiwianRpIjoiZTBmMTZiOTctOTk1Ny00ODRkLWJhMDYtZWY1MTE5Y2U5NWMzIn0.MheFv44g0u2YlSpPFjQYGb7hXboOoAM81f1HAvIg2V8",
+            },
+          });
+          const data = await res.json();
+          const features = data.features || [];
+          stops = features.map((f: any) => ({
+            stop_id: f.properties?.stop_id || "",
+            stop_name: f.properties?.stop_name || "",
+            platform_code: f.properties?.platform_code || "",
+          }));
+          setAllStops(stops);
+        } catch {
+          setAllStops([]);
+        }
       }
-      
-      setResults(Object.values(grouped));
-    } catch (e) {
-      console.error("Stop search error:", e);
-      setResults([]);
-    }
-    setLoading(false);
+      setLoading(false);
+    };
+    fetchStops();
   }, []);
 
-  useEffect(() => {
-    const timeout = setTimeout(() => searchStops(query), 300);
-    return () => clearTimeout(timeout);
-  }, [query, searchStops]);
+  // Group and filter stops based on query
+  const results = useMemo(() => {
+    if (query.length < 2) return [];
+    const normalizedQuery = removeDiacritics(query);
+
+    const matching = allStops.filter((s) =>
+      removeDiacritics(s.stop_name).includes(normalizedQuery)
+    );
+
+    // Group by base stop name (remove platform info)
+    const grouped: Record<string, StopResult> = {};
+    for (const stop of matching) {
+      const baseName = stop.stop_name.replace(/\s*\(.*\)$/, "").trim();
+      if (!grouped[baseName]) {
+        grouped[baseName] = { name: baseName, platforms: [] };
+      }
+      grouped[baseName].platforms.push({
+        id: stop.stop_id,
+        name: stop.stop_name,
+      });
+    }
+
+    return Object.values(grouped).slice(0, 20);
+  }, [query, allStops]);
 
   return (
     <div className="space-y-3">
@@ -71,19 +132,25 @@ const StopSearch = ({ onSelectStop }: StopSearchProps) => {
         />
       </div>
 
+      {loading && (
+        <div className="flex items-center gap-2 p-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Načítám seznam zastávek...</span>
+        </div>
+      )}
+
       <ScrollArea className="h-[300px]">
-        {loading && <p className="text-sm text-muted-foreground p-2">Hledám...</p>}
-        {results.map((stop) => (
-          <div key={stop.id} className="border-b border-border last:border-0">
+        {!loading && results.map((stop) => (
+          <div key={stop.name} className="border-b border-border last:border-0">
             <button
               className="w-full text-left p-2 hover:bg-muted/30 transition-colors flex items-center gap-2"
-              onClick={() => setExpandedStop(expandedStop === stop.id ? null : stop.id)}
+              onClick={() => setExpandedStop(expandedStop === stop.name ? null : stop.name)}
             >
               <MapPin className="h-4 w-4 text-primary flex-shrink-0" />
               <span className="text-sm font-medium text-foreground">{stop.name}</span>
               <span className="text-xs text-muted-foreground ml-auto">{stop.platforms.length} zastávek</span>
             </button>
-            {expandedStop === stop.id && (
+            {expandedStop === stop.name && (
               <div className="pl-8 pb-2 space-y-1">
                 {stop.platforms.map((platform) => (
                   <button
