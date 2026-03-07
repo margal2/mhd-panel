@@ -17,6 +17,7 @@ interface DepartureBoardProps {
   stopName: string;
   stopId: string;
   limit?: number;
+  onHeaderClick?: () => void;
 }
 
 const API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MzkzMiwiaWF0IjoxNzU3ODM1OTk2LCJleHAiOjExNzU3ODM1OTk2LCJpc3MiOiJnb2xlbWlvIiwianRpIjoiZTBmMTZiOTctOTk1Ny00ODRkLWJhMDYtZWY1MTE5Y2U5NWMzIn0.MheFv44g0u2YlSpPFjQYGb7hXboOoAM81f1HAvIg2V8";
@@ -72,7 +73,7 @@ const getDelayText = (delay: number) => {
   return '0 min';
 };
 
-const DepartureBoard = ({ stopName, stopId, limit = 6 }: DepartureBoardProps) => {
+const DepartureBoard = ({ stopName, stopId, limit = 6, onHeaderClick }: DepartureBoardProps) => {
   const [departures, setDepartures] = useState<Departure[]>([]);
   const [status, setStatus] = useState<string>("Načítám...");
   const [lastUpdated, setLastUpdated] = useState<string>("");
@@ -130,7 +131,10 @@ const DepartureBoard = ({ stopName, stopId, limit = 6 }: DepartureBoardProps) =>
   return (
     <Card className="overflow-hidden border-border bg-card/50 backdrop-blur-sm">
       {/* Header */}
-      <div className="bg-secondary/80 p-3 border-b border-border">
+      <div
+        className={`bg-secondary/80 p-3 border-b border-border ${onHeaderClick ? "cursor-pointer hover:bg-secondary transition-colors" : ""}`}
+        onClick={onHeaderClick}
+      >
         <div className="flex items-center gap-2 mb-2">
           <Train className="h-4 w-4 text-primary" />
           <h2 className="text-lg font-bold text-foreground">
