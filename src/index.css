@@ -59,6 +59,41 @@ All colors MUST be HSL.
     --glow-primary: 0 0 20px hsl(var(--primary) / 0.3);
     --glow-accent: 0 0 20px hsl(var(--accent) / 0.3);
   }
+
+  .light {
+    --background: 40 20% 96%;
+    --foreground: 220 25% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 25% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 25% 12%;
+    --primary: 220 70% 45%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 15% 90%;
+    --secondary-foreground: 220 25% 12%;
+    --muted: 220 15% 92%;
+    --muted-foreground: 220 10% 45%;
+    --accent: 200 80% 50%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 120 50% 40%;
+    --success-foreground: 0 0% 100%;
+    --warning: 30 90% 50%;
+    --warning-foreground: 0 0% 100%;
+    --border: 220 15% 85%;
+    --input: 220 15% 90%;
+    --ring: 220 70% 45%;
+    --radius: 0.75rem;
+    --status-ontime: 120 50% 40%;
+    --status-delayed: 0 75% 55%;
+    --status-cancelled: 0 75% 35%;
+    --status-boarding: 30 90% 50%;
+    --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --glow-primary: 0 0 20px hsl(var(--primary) / 0.15);
+    --glow-accent: 0 0 20px hsl(var(--accent) / 0.15);
+  }
 }
 
 @layer base {
