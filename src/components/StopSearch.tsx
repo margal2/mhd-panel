@@ -72,20 +72,20 @@ const StopSearch = ({ onSelectStop }: StopSearchProps) => {
         console.error("Failed to load stops:", e);
         // Fallback: try Golemio API with larger limit
         try {
-          const res = await fetch("https://api.golemio.cz/v2/gtfs/stops?limit=10000", {
+          const fallbackRes = await fetch("https://api.golemio.cz/v2/gtfs/stops?limit=10000", {
             headers: {
               Accept: "application/json",
               "x-access-token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MzkzMiwiaWF0IjoxNzU3ODM1OTk2LCJleHAiOjExNzU3ODM1OTk2LCJpc3MiOiJnb2xlbWlvIiwianRpIjoiZTBmMTZiOTctOTk1Ny00ODRkLWJhMDYtZWY1MTE5Y2U5NWMzIn0.MheFv44g0u2YlSpPFjQYGb7hXboOoAM81f1HAvIg2V8",
             },
           });
-          const data = await res.json();
-          const features = data.features || [];
-          stops = features.map((f: any) => ({
+          const fallbackData = await fallbackRes.json();
+          const features = fallbackData.features || [];
+          const fallbackStops: PidStop[] = features.map((f: any) => ({
             stop_id: f.properties?.stop_id || "",
             stop_name: f.properties?.stop_name || "",
             platform_code: f.properties?.platform_code || "",
           }));
-          setAllStops(stops);
+          setAllStops(fallbackStops);
         } catch {
           setAllStops([]);
         }
