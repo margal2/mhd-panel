@@ -1,7 +1,7 @@
 import DepartureBoard from "./DepartureBoard";
 import LiveClock from "./LiveClock";
 import SettingsPanel, { StopConfig } from "./SettingsPanel";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 
 const DEFAULT_STOPS: StopConfig[] = [
