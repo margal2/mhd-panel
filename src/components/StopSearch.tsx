@@ -53,10 +53,17 @@ const StopSearch = ({ onSelectStop }: StopSearchProps) => {
           const data = await res.json();
           const features = data.features || [];
           
-          const batch: PidStop[] = features.map((f: any) => ({
-            stop_id: f.properties?.stop_id || "",
-            stop_name: f.properties?.stop_name || "",
-          }));
+          const batch: PidStop[] = features
+            .filter((f: any) => {
+              const id = f.properties?.stop_id || "";
+              // Only keep PID-compatible IDs (ending with P, format like U40Z1P)
+              return /^U\d+Z\d+P$/.test(id);
+            })
+            .map((f: any) => ({
+              stop_id: f.properties?.stop_id || "",
+              stop_name: f.properties?.stop_name || "",
+              platform_code: f.properties?.platform_code || "",
+            }));
           
           allFetched = [...allFetched, ...batch];
           hasMore = features.length === batchSize;
