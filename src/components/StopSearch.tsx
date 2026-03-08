@@ -96,11 +96,12 @@ const StopSearch = ({ onSelectStop }: StopSearchProps) => {
       if (!grouped[baseName]) {
         grouped[baseName] = { name: baseName, platforms: [] };
       }
-      // Avoid duplicate platform IDs
       if (!grouped[baseName].platforms.find(p => p.id === stop.stop_id)) {
         grouped[baseName].platforms.push({
           id: stop.stop_id,
-          name: `${stop.stop_name} [${stop.stop_id}]`,
+          name: stop.platform_code
+            ? `Nástupiště ${stop.platform_code}`
+            : stop.stop_id,
         });
       }
     }
