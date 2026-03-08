@@ -109,7 +109,7 @@ const FourCornerDepartures = () => {
 
       {/* Grid of boards - 2x2, paginated */}
       {!expandedStop && (
-        <div className="flex-1 min-h-0 flex flex-col">
+        <div className="flex-1 min-h-0 flex flex-col" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
           <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 grid-rows-2 gap-1 sm:gap-2">
             {currentStops.map((stop) => (
               <div key={stop.id} className="min-h-0 flex flex-col overflow-hidden">
