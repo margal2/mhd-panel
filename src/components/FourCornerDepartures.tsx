@@ -1,8 +1,8 @@
 import DepartureBoard from "./DepartureBoard";
 import LiveClock from "./LiveClock";
 import SettingsPanel, { StopConfig } from "./SettingsPanel";
-import { useState, useEffect } from "react";
-import { X } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { X, ChevronLeft, ChevronRight } from "lucide-react";
 
 const DEFAULT_STOPS: StopConfig[] = [
   { name: "Na Pískách - Hradčanská", id: "U40Z1P" },
@@ -13,6 +13,7 @@ const DEFAULT_STOPS: StopConfig[] = [
 
 const STORAGE_KEY = "mhd-dashboard-stops";
 const THEME_KEY = "mhd-dashboard-theme";
+const STOPS_PER_PAGE = 4;
 
 const FourCornerDepartures = () => {
   const [stops, setStops] = useState<StopConfig[]>(() => {
@@ -25,9 +26,20 @@ const FourCornerDepartures = () => {
   });
 
   const [expandedStop, setExpandedStop] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+
+  const totalPages = Math.max(1, Math.ceil(stops.length / STOPS_PER_PAGE));
+  const currentStops = useMemo(
+    () => stops.slice(page * STOPS_PER_PAGE, (page + 1) * STOPS_PER_PAGE),
+    [stops, page]
+  );
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(stops));
+    // Reset page if out of bounds
+    if (page >= Math.ceil(stops.length / STOPS_PER_PAGE)) {
+      setPage(Math.max(0, Math.ceil(stops.length / STOPS_PER_PAGE) - 1));
+    }
   }, [stops]);
 
   useEffect(() => {
@@ -70,24 +82,44 @@ const FourCornerDepartures = () => {
         </div>
       )}
 
-      {/* Grid of boards */}
+      {/* Grid of boards - 2x2, paginated */}
       {!expandedStop && (
-        <div className={`flex-1 min-h-0 grid gap-1 sm:gap-2 ${
-          stops.length <= 1 ? "grid-cols-1" :
-          stops.length <= 2 ? "grid-cols-1 md:grid-cols-2" :
-          stops.length <= 4 ? "grid-cols-1 md:grid-cols-2" :
-          "grid-cols-1 md:grid-cols-2 xl:grid-cols-3"
-        } ${stops.length > 2 ? "grid-rows-2" : ""}`}>
-          {stops.map((stop) => (
-            <div key={stop.id} className="min-h-0 flex flex-col">
-              <DepartureBoard
-                stopName={stop.name}
-                stopId={stop.id}
-                limit={6}
-                onHeaderClick={() => handleHeaderClick(stop.id)}
-              />
+        <div className="flex-1 min-h-0 flex flex-col">
+          <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 grid-rows-2 gap-1 sm:gap-2">
+            {currentStops.map((stop) => (
+              <div key={stop.id} className="min-h-0 flex flex-col overflow-hidden">
+                <DepartureBoard
+                  stopName={stop.name}
+                  stopId={stop.id}
+                  limit={6}
+                  onHeaderClick={() => handleHeaderClick(stop.id)}
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-3 py-1 flex-shrink-0">
+              <button
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="p-1 rounded text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <span className="text-xs text-muted-foreground">
+                {page + 1} / {totalPages}
+              </span>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                disabled={page === totalPages - 1}
+                className="p-1 rounded text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
             </div>
-          ))}
+          )}
         </div>
       )}
     </div>
