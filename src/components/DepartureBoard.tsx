@@ -130,7 +130,7 @@ const DepartureBoard = ({ stopName, stopId, limit = 6, expanded = false, onHeade
   }, []);
 
   return (
-    <Card className="overflow-hidden border-border bg-card/50 backdrop-blur-sm">
+    <Card className={`overflow-hidden border-border bg-card/50 backdrop-blur-sm ${expanded ? "h-full flex flex-col" : ""}`}>
       {/* Header */}
       <div
         className={`bg-secondary/80 p-3 border-b border-border ${onHeaderClick ? "cursor-pointer hover:bg-secondary transition-colors" : ""}`}
