@@ -1,7 +1,7 @@
 import DepartureBoard from "./DepartureBoard";
 import LiveClock from "./LiveClock";
 import SettingsPanel, { StopConfig } from "./SettingsPanel";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 
 const DEFAULT_STOPS: StopConfig[] = [
@@ -34,9 +34,34 @@ const FourCornerDepartures = () => {
     [stops, page]
   );
 
+  // Swipe gesture support
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    const dy = e.changedTouches[0].clientY - touchStartY.current;
+    const absDx = Math.abs(dx);
+    const absDy = Math.abs(dy);
+    if (absDx > 50 && absDx > absDy * 1.5) {
+      if (dx < 0) {
+        setPage((p) => Math.min(totalPages - 1, p + 1));
+      } else {
+        setPage((p) => Math.max(0, p - 1));
+      }
+    }
+    touchStartX.current = null;
+    touchStartY.current = null;
+  }, [totalPages]);
+
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(stops));
-    // Reset page if out of bounds
     if (page >= Math.ceil(stops.length / STOPS_PER_PAGE)) {
       setPage(Math.max(0, Math.ceil(stops.length / STOPS_PER_PAGE) - 1));
     }
@@ -84,7 +109,7 @@ const FourCornerDepartures = () => {
 
       {/* Grid of boards - 2x2, paginated */}
       {!expandedStop && (
-        <div className="flex-1 min-h-0 flex flex-col">
+        <div className="flex-1 min-h-0 flex flex-col" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
           <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 grid-rows-2 gap-1 sm:gap-2">
             {currentStops.map((stop) => (
               <div key={stop.id} className="min-h-0 flex flex-col overflow-hidden">
