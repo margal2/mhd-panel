@@ -17,6 +17,7 @@ interface DepartureBoardProps {
   stopName: string;
   stopId: string;
   limit?: number;
+  expanded?: boolean;
   onHeaderClick?: () => void;
 }
 
