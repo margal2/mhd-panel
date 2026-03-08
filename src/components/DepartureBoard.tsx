@@ -74,7 +74,7 @@ const getDelayText = (delay: number) => {
   return '0 min';
 };
 
-const DepartureBoard = ({ stopName, stopId, limit = 6, onHeaderClick }: DepartureBoardProps) => {
+const DepartureBoard = ({ stopName, stopId, limit = 6, expanded = false, onHeaderClick }: DepartureBoardProps) => {
   const [departures, setDepartures] = useState<Departure[]>([]);
   const [status, setStatus] = useState<string>("Načítám...");
   const [lastUpdated, setLastUpdated] = useState<string>("");
