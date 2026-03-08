@@ -15,6 +15,7 @@ interface StopSearchProps {
 interface PidStop {
   stop_id: string;
   stop_name: string;
+  platform_code: string;
 }
 
 const API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MzkzMiwiaWF0IjoxNzU3ODM1OTk2LCJleHAiOjExNzU3ODM1OTk2LCJpc3MiOiJnb2xlbWlvIiwianRpIjoiZTBmMTZiOTctOTk1Ny00ODRkLWJhMDYtZWY1MTE5Y2U5NWMzIn0.MheFv44g0u2YlSpPFjQYGb7hXboOoAM81f1HAvIg2V8";
@@ -52,10 +53,17 @@ const StopSearch = ({ onSelectStop }: StopSearchProps) => {
           const data = await res.json();
           const features = data.features || [];
           
-          const batch: PidStop[] = features.map((f: any) => ({
-            stop_id: f.properties?.stop_id || "",
-            stop_name: f.properties?.stop_name || "",
-          }));
+          const batch: PidStop[] = features
+            .filter((f: any) => {
+              const id = f.properties?.stop_id || "";
+              // Only keep PID-compatible IDs (ending with P, format like U40Z1P)
+              return /^U\d+Z\d+P$/.test(id);
+            })
+            .map((f: any) => ({
+              stop_id: f.properties?.stop_id || "",
+              stop_name: f.properties?.stop_name || "",
+              platform_code: f.properties?.platform_code || "",
+            }));
           
           allFetched = [...allFetched, ...batch];
           hasMore = features.length === batchSize;
@@ -88,11 +96,12 @@ const StopSearch = ({ onSelectStop }: StopSearchProps) => {
       if (!grouped[baseName]) {
         grouped[baseName] = { name: baseName, platforms: [] };
       }
-      // Avoid duplicate platform IDs
       if (!grouped[baseName].platforms.find(p => p.id === stop.stop_id)) {
         grouped[baseName].platforms.push({
           id: stop.stop_id,
-          name: `${stop.stop_name} [${stop.stop_id}]`,
+          name: stop.platform_code
+            ? `Nástupiště ${stop.platform_code}`
+            : stop.stop_id,
         });
       }
     }
@@ -144,10 +153,11 @@ const StopSearch = ({ onSelectStop }: StopSearchProps) => {
                   <button
                     key={platform.id}
                     className="w-full text-left p-1.5 px-2 hover:bg-primary/10 rounded text-xs flex items-center gap-2 transition-colors"
-                    onClick={() => onSelectStop({ name: stop.name, id: platform.id })}
+                    onClick={() => onSelectStop({ name: `${stop.name} - ${platform.name}`, id: platform.id })}
                   >
                     <Plus className="h-3 w-3 text-primary" />
-                    <span className="text-foreground font-mono">{platform.id}</span>
+                    <span className="text-foreground">{platform.name}</span>
+                    <span className="text-muted-foreground font-mono ml-auto">{platform.id}</span>
                   </button>
                 ))}
               </div>

@@ -17,6 +17,7 @@ interface DepartureBoardProps {
   stopName: string;
   stopId: string;
   limit?: number;
+  expanded?: boolean;
   onHeaderClick?: () => void;
 }
 
@@ -73,7 +74,7 @@ const getDelayText = (delay: number) => {
   return '0 min';
 };
 
-const DepartureBoard = ({ stopName, stopId, limit = 6, onHeaderClick }: DepartureBoardProps) => {
+const DepartureBoard = ({ stopName, stopId, limit = 6, expanded = false, onHeaderClick }: DepartureBoardProps) => {
   const [departures, setDepartures] = useState<Departure[]>([]);
   const [status, setStatus] = useState<string>("Načítám...");
   const [lastUpdated, setLastUpdated] = useState<string>("");
@@ -129,7 +130,7 @@ const DepartureBoard = ({ stopName, stopId, limit = 6, onHeaderClick }: Departur
   }, []);
 
   return (
-    <Card className="overflow-hidden border-border bg-card/50 backdrop-blur-sm">
+    <Card className={`overflow-hidden border-border bg-card/50 backdrop-blur-sm ${expanded ? "h-full flex flex-col" : ""}`}>
       {/* Header */}
       <div
         className={`bg-secondary/80 p-3 border-b border-border ${onHeaderClick ? "cursor-pointer hover:bg-secondary transition-colors" : ""}`}
@@ -158,7 +159,7 @@ const DepartureBoard = ({ stopName, stopId, limit = 6, onHeaderClick }: Departur
       </div>
 
       {/* Departure Rows */}
-      <div className="divide-y divide-border max-h-48 overflow-y-auto">
+      <div className={`divide-y divide-border overflow-y-auto ${expanded ? "flex-1" : "max-h-48"}`}>
         {departures.length === 0 ? (
           <div className="p-4 text-center text-muted-foreground text-sm">
             {status === "Chyba při načítání dat" ? "Nepodařilo se načíst odjezdy" : "Čekání na data..."}
