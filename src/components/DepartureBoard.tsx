@@ -127,7 +127,7 @@ const DepartureBoard = ({ stopName, stopId, limit = 6, expanded = false, onHeade
     fetchDepartures();
     const interval = setInterval(fetchDepartures, POLL_INTERVAL);
     return () => clearInterval(interval);
-  }, []);
+  }, [stopId, limit]);
 
   return (
     <Card className={`overflow-hidden border-border bg-card/50 backdrop-blur-sm ${expanded ? "h-full flex flex-col" : ""}`}>
