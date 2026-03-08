@@ -153,10 +153,11 @@ const StopSearch = ({ onSelectStop }: StopSearchProps) => {
                   <button
                     key={platform.id}
                     className="w-full text-left p-1.5 px-2 hover:bg-primary/10 rounded text-xs flex items-center gap-2 transition-colors"
-                    onClick={() => onSelectStop({ name: stop.name, id: platform.id })}
+                    onClick={() => onSelectStop({ name: `${stop.name} - ${platform.name}`, id: platform.id })}
                   >
                     <Plus className="h-3 w-3 text-primary" />
-                    <span className="text-foreground font-mono">{platform.id}</span>
+                    <span className="text-foreground">{platform.name}</span>
+                    <span className="text-muted-foreground font-mono ml-auto">{platform.id}</span>
                   </button>
                 ))}
               </div>

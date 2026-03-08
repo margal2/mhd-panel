@@ -63,6 +63,7 @@ const FourCornerDepartures = () => {
               stopName={stops.find((s) => s.id === expandedStop)?.name || ""}
               stopId={expandedStop}
               limit={20}
+              expanded={true}
               onHeaderClick={() => setExpandedStop(null)}
             />
           </div>

@@ -159,7 +159,7 @@ const DepartureBoard = ({ stopName, stopId, limit = 6, expanded = false, onHeade
       </div>
 
       {/* Departure Rows */}
-      <div className="divide-y divide-border max-h-48 overflow-y-auto">
+      <div className={`divide-y divide-border overflow-y-auto ${expanded ? "flex-1" : "max-h-48"}`}>
         {departures.length === 0 ? (
           <div className="p-4 text-center text-muted-foreground text-sm">
             {status === "Chyba při načítání dat" ? "Nepodařilo se načíst odjezdy" : "Čekání na data..."}
