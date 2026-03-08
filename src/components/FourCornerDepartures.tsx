@@ -28,6 +28,12 @@ const FourCornerDepartures = () => {
   const [expandedStop, setExpandedStop] = useState<string | null>(null);
   const [page, setPage] = useState(0);
 
+  const totalPages = Math.max(1, Math.ceil(stops.length / STOPS_PER_PAGE));
+  const currentStops = useMemo(
+    () => stops.slice(page * STOPS_PER_PAGE, (page + 1) * STOPS_PER_PAGE),
+    [stops, page]
+  );
+
   // Swipe gesture support
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
@@ -43,7 +49,6 @@ const FourCornerDepartures = () => {
     const dy = e.changedTouches[0].clientY - touchStartY.current;
     const absDx = Math.abs(dx);
     const absDy = Math.abs(dy);
-    // Only trigger if horizontal swipe > 50px and more horizontal than vertical
     if (absDx > 50 && absDx > absDy * 1.5) {
       if (dx < 0) {
         setPage((p) => Math.min(totalPages - 1, p + 1));
@@ -54,12 +59,6 @@ const FourCornerDepartures = () => {
     touchStartX.current = null;
     touchStartY.current = null;
   }, [totalPages]);
-
-  const totalPages = Math.max(1, Math.ceil(stops.length / STOPS_PER_PAGE));
-  const currentStops = useMemo(
-    () => stops.slice(page * STOPS_PER_PAGE, (page + 1) * STOPS_PER_PAGE),
-    [stops, page]
-  );
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(stops));
